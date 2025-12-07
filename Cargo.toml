@@ -1,7 +1,13 @@
 [package]
 name = "desktop_shortcut_remover"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
+license = "MIT"
+description = "A program that periodically removes desktop shortcuts"
+repository = "https://github.com/G0rocks/desktop_shortcut_remover"
+readme = "README.md"
+categories = ["filesystem"]
+keywords = ["desktop", "shortcut", "removal", "automation"]
 
 [dependencies]
 chrono = "0.4.42"
