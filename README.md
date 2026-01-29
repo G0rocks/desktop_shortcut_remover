@@ -12,7 +12,10 @@ Install with winget (only works after [this PR]([url](https://github.com/microso
 
 ## User manual
 The program must be run once (can be manual or set to run on startup).
-After that the program will check the public and user desktop daily at 10:00 (10 in the morning for AM/PM people) and delete all shortcuts on the desktop.
+After that the program will delete shortcuts a few seconds after they are created and also check the public and user desktop daily at 10:00 (10 in the morning for AM/PM people) to delete all shortcuts on the desktop in case any are missed in the real time deletions.
+
+To configure to run at startup, run `shell:startup` to open the startup folder and add a shortcut to the desktop shortcut remover (wherever you have it installed).
+
 To shutdown the program you must open the task manager and end the task.
 
 ## Contributions welcome :)
