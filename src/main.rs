@@ -15,9 +15,32 @@ use std::path::PathBuf;
 use tasklet::task::TaskStepStatusOk::Success;
 use tasklet::{TaskBuilder, TaskScheduler};
 
+// Use notify for getting events when files change. Also import necessary things from standard library
+use notify::{RecommendedWatcher, RecursiveMode, Watcher, EventKind};
+use std::{
+    collections::HashMap,
+    sync::mpsc,
+    time::{Duration, Instant},
+};
+
+
+
 // Uses tokio main for async runtime
 #[tokio::main]
 async fn main() {
+    // Get public desktop directory
+    let public_desktop_path = PathBuf::from("C:\\Users\\Public\\Desktop");
+    // Get users desktop directory
+    let user_desktop_path = dirs::desktop_dir().expect("Could not find desktop directory");
+
+    // Start file watchers on both desktop paths
+    let _ = std::thread::spawn(move || {
+        let _ = start_desktop_watcher(public_desktop_path);
+    });
+    let _ = std::thread::spawn(move || {
+        let _ = start_desktop_watcher(user_desktop_path);
+    });
+
     // Task scheduler with 24 hour loop frequency.
     let mut scheduler = TaskScheduler::default(chrono::Local);
  
@@ -105,4 +128,69 @@ fn delete_shortcuts(shortcut_paths: Vec<String>) -> Result<(), Box<dyn std::erro
 
     // Return success
     return Ok(());
+}
+
+/// Function that starts a file watcher on the desktop path
+/// For event based deletion of files
+fn start_desktop_watcher(desktop_path: PathBuf) -> notify::Result<()> {
+    let (tx, rx) = mpsc::channel();
+
+    let mut watcher = RecommendedWatcher::new(
+        tx,
+        notify::Config::default(),
+    )?;
+
+    watcher.watch(&desktop_path, RecursiveMode::NonRecursive)?;
+
+    debounce_loop(rx);
+
+    Ok(())
+}
+
+/// Function that debounces events from the file watcher to ensure the shortcut is only deleted
+/// after a some time has passed since the last modification
+/// This prevents deleting files that are still being modified.
+fn debounce_loop(rx: mpsc::Receiver<notify::Result<notify::Event>>) {
+    const GRACE: Duration = Duration::from_secs(3);
+
+    let mut pending: HashMap<PathBuf, Instant> = HashMap::new();
+
+    loop {
+        // Collect events (non-blocking-ish)
+        while let Ok(Ok(event)) = rx.try_recv() {
+            if !matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_)) {
+                continue;
+            }
+
+            for path in event.paths {
+                if path.extension().and_then(|e| e.to_str()) == Some("lnk") {
+                    pending.insert(path, Instant::now());
+                }
+            }
+        }
+
+        // Check which ones have settled
+        let now = Instant::now();
+        let ready: Vec<PathBuf> = pending
+            .iter()
+            .filter(|(_, t)| now.duration_since(**t) >= GRACE)
+            .map(|(p, _)| p.clone())
+            .collect();
+
+        for path in ready {
+            pending.remove(&path);
+            evaluate_and_maybe_delete(&path);
+        }
+
+        std::thread::sleep(Duration::from_millis(500));
+    }
+}
+
+/// Function that checks if the shortcut still exists and if so, deletes it
+fn evaluate_and_maybe_delete(path: &PathBuf) {
+    if !path.exists() {
+        return;
+    }
+
+    let _ = std::fs::remove_file(path);
 }
