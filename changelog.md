@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 
 
+## [1.1.0] - 2026-01-29
+
+### Added
+
+- Event based shortcut deletions and in case they don't work, the 10:00 o'clock scheduled delete is still in place :) 
+
 ## [1.0.0] - 2025-12-07
 The first release of the desktop shortcut remover.
 Made to deal with [this problem](https://github.com/microsoft/winget-cli/issues/1545#issuecomment-3620746650).
