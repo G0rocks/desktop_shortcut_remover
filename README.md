@@ -1,5 +1,6 @@
 # Desktop Shortcut Remover
-A program that periodically removes desktop shortcuts
+A program that periodically removes desktop shortcuts.
+It also deletes shortcuts as they appear keeping your desktop less cluttered than it would otherwise be :)
 
 This program was made to help deal with the problem in [this issue](https://github.com/microsoft/winget-cli/issues/1545#issuecomment-3620746650).
 
