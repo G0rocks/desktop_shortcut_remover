@@ -7,7 +7,8 @@ This program was made to help deal with the problem in [this issue](https://gith
 ## How to install
 Install with cargo using:
 `cargo install desktop_shortcut_remover`
-Install with winget (only works after [this PR]([url](https://github.com/microsoft/winget-pkgs/pull/320398)) has been merged):
+
+Install with winget:
 `winget install G0rocks.DesktopShortcutRemover`
 
 ## User manual
