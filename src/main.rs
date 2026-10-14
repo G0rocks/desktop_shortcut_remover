@@ -8,8 +8,8 @@ Description: A program that periodically removes desktop shortcuts
 // Set Windows subsystem to windows to prevent console window from appearing
 #![windows_subsystem = "windows"]
 
-// Import standard library for making the Publisc desktop path
-use std::path::PathBuf;
+// Import standard library for making the Publisc desktop path and for notifications
+use std::path::{Path, PathBuf};
 
 // Use tasklet for scheduling tasks
 use tasklet::task::TaskStepStatusOk::Success;
@@ -23,11 +23,27 @@ use std::{
     time::{Duration, Instant},
 };
 
-
+// Use notify-rust for sending notifications to the user
+use notify_rust::Notification;
+// To register the program in the windows registry
+use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+// App ID for the program. Used for registry key and notification ID
+const APP_ID: &str = "G0rocks.DesktopShortcutRemover";
+// Logo for a link to the logo
+const LOGO: &[u8] = include_bytes!("../logos/logo-icon-256.png");
 
 // Uses tokio main for async runtime
 #[tokio::main]
 async fn main() {
+    // Register app if on windows
+    #[cfg(target_os = "windows")]
+    {
+        // Register program icon
+        if let Err(e) = register_app() {
+            eprintln!("Error registering app: {}", e);
+        }
+    }
+
     // Get public desktop directory
     let public_desktop_path = PathBuf::from("C:\\Users\\Public\\Desktop");
     // Get users desktop directory
@@ -123,7 +139,9 @@ fn delete_shortcuts(shortcut_paths: Vec<String>) -> Result<(), Box<dyn std::erro
     // For each shortcut, delete the entry
     for shortcut in shortcut_paths {
         // Delete file at path
-        std::fs::remove_file(shortcut)?;
+        std::fs::remove_file(&shortcut)?;
+        // Notify user that the shortcut was deleted
+        notify_removed(&PathBuf::from(shortcut));
     }
 
     // Return success
@@ -188,9 +206,50 @@ fn debounce_loop(rx: mpsc::Receiver<notify::Result<notify::Event>>) {
 
 /// Function that checks if the shortcut still exists and if so, deletes it
 fn evaluate_and_maybe_delete(path: &PathBuf) {
+    // Check if path exists
     if !path.exists() {
         return;
     }
 
+    // Delete the shortcut
     let _ = std::fs::remove_file(path);
+    // Notify the user that the shortcut was deleted
+    notify_removed(path);
+}
+
+/// Function to register app
+fn register_app() -> std::io::Result<()> {
+    let base = std::env::var_os("LOCALAPPDATA")
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "LOCALAPPDATA not set"))?;
+    let dir = PathBuf::from(base).join("DesktopShortcutRemover");
+    std::fs::create_dir_all(&dir)?;
+
+    let logo = dir.join("logo.png");
+    std::fs::write(&logo, LOGO)?; // always rewrite while testing
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let (key, _) = hkcu.create_subkey(format!(r"Software\Classes\AppUserModelId\{APP_ID}"))?;
+    key.set_value("DisplayName", &"Desktop Shortcut Remover")?;
+    key.set_value("IconUri", &logo.to_string_lossy().into_owned())?;
+    Ok(())
+}
+
+/// Function to show notification to the user about which shortcut was deleted
+
+/// Shows a toast naming the shortcut that was removed
+fn notify_removed(path: &Path) {
+    let name = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("a shortcut");
+
+    let mut popup_notification = Notification::new();
+    popup_notification.appname("Desktop shortcut remover")
+        .summary("Shortcut removed")
+        .body(&format!("Removed {name}"));
+
+    #[cfg(target_os = "windows")]
+    popup_notification.app_id(APP_ID);
+
+    let _ = popup_notification.show();
 }
