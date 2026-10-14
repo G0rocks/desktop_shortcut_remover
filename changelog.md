@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 
 
+## [1.1.1] - 2026-10-14
+
+### Added
+
+- Notifications for which shortcut was deleted from your desktop
+
 ## [1.1.0] - 2026-01-29
 
 ### Added
