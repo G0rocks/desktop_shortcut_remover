@@ -1,4 +1,5 @@
-# Desktop Shortcut Remover
+![](logos/logo-lockup.png)
+
 A program that periodically removes desktop shortcuts.
 It also deletes shortcuts as they appear keeping your desktop less cluttered than it would otherwise be :)
 
